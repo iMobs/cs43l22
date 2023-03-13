@@ -11,7 +11,7 @@ use stm32f4xx_hal::{
     prelude::*,
 };
 
-const SAMPLE_RATE: u32 = 48_000;
+const SAMPLE_RATE: u32 = 96_000;
 
 /// A sine wave spanning 64 samples
 ///
@@ -48,8 +48,8 @@ fn main() -> ! {
     let clocks = rcc
         .cfgr
         .use_hse(8.MHz())
-        .sysclk(96.MHz())
-        .i2s_clk(61_440.kHz())
+        .sysclk(168.MHz())
+        .i2s_clk(96.MHz())
         .freeze();
     let gpioa = dp.GPIOA.split();
     let gpiob = dp.GPIOB.split();
@@ -70,6 +70,7 @@ fn main() -> ! {
     let i2s = i2s::I2s::new(dp.SPI3, pins, &clocks);
     let i2s_config = I2sTransferConfig::new_master()
         .transmit()
+        .master_clock(true)
         .standard(Philips)
         .data_format(Data32Channel32)
         .request_frequency(SAMPLE_RATE);
