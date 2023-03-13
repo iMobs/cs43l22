@@ -109,7 +109,7 @@ where
         cs43l22.write_register(REG_POWER_CTL1, 0x01)?;
 
         // Save output device for mute ON/OFF procedure
-        cs43l22.write_register(REG_POWER_CTL2, cs43l22.config.output_device.value())?;
+        cs43l22.write_register(REG_POWER_CTL2, cs43l22.config.output_device)?;
 
         // clock config auto detect
         cs43l22.write_register(REG_CLOCKING_CTL, 0x81)?;
@@ -197,7 +197,7 @@ where
         // Kill time?
         for _ in 0..0xff {}
 
-        self.write_register(REG_POWER_CTL2, self.config.output_device.value())?;
+        self.write_register(REG_POWER_CTL2, self.config.output_device)?;
 
         /* Exit the Power save mode */
         self.write_register(REG_POWER_CTL1, 0x9E)?;
@@ -251,13 +251,14 @@ where
         } else {
             self.write_register(REG_HEADPHONE_A_VOL, 0x00)?;
             self.write_register(REG_HEADPHONE_B_VOL, 0x00)?;
-            self.write_register(REG_POWER_CTL2, self.config.output_device.value())?;
+            self.write_register(REG_POWER_CTL2, self.config.output_device)?;
         }
 
         Ok(())
     }
 
-    fn write_register(&mut self, register: u8, data: u8) -> Result<(), I2CError> {
+    fn write_register<Data: Into<u8>>(&mut self, register: u8, data: Data) -> Result<(), I2CError> {
+        let data = data.into();
         // Write MAP(register) byte and data
         self.bus.write(self.address, &[register, data])?;
 
@@ -294,5 +295,11 @@ impl OutputDevice {
             Self::Both => 0xAA,
             Self::Auto => 0x05,
         }
+    }
+}
+
+impl From<OutputDevice> for u8 {
+    fn from(device: OutputDevice) -> Self {
+        device.value()
     }
 }
