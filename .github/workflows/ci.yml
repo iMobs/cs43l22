@@ -17,7 +17,7 @@ jobs:
           - windows-latest
         toolchain:
           - stable
-          - nightly
+          # - nightly
 
     runs-on: ${{ matrix.os }}
 
