@@ -1,7 +1,7 @@
 #![no_main]
 #![no_std]
 
-use cs43l22::{OutputDevice, CS43L22};
+use cs43l22::{Config, CS43L22};
 use defmt_rtt as _;
 use panic_probe as _;
 use stm32f4xx_hal::{pac, prelude::*};
@@ -16,7 +16,7 @@ fn main() -> ! {
 
     let pins = (gpiob.pb6, gpiob.pb9);
     let i2c = dp.I2C1.i2c(pins, 25.kHz(), &clocks);
-    let _cs43l22 = CS43L22::new(i2c, 0x94, OutputDevice::Auto, 50).unwrap();
+    let _cs43l22 = CS43L22::new(i2c, 0x94, Config::new()).unwrap();
 
     exit()
 }

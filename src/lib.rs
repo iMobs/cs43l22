@@ -46,10 +46,50 @@ const ID_MASK: u8 = 0xF8;
 
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct Config {
+    output_device: OutputDevice,
+    volume: u8,
+    verify_write: bool,
+}
+
+impl Config {
+    pub fn new() -> Self {
+        Self {
+            output_device: OutputDevice::Auto,
+            volume: 50,
+            verify_write: false,
+        }
+    }
+
+    pub fn output_device(mut self, output_device: OutputDevice) -> Self {
+        self.output_device = output_device;
+        self
+    }
+
+    pub fn volume(mut self, volume: u8) -> Self {
+        self.volume = volume;
+        self
+    }
+
+    pub fn verify_write(mut self, verify_write: bool) -> Self {
+        self.verify_write = verify_write;
+        self
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct CS43L22<Bus> {
     address: u8,
     bus: Bus,
     stopped: bool,
+    config: Config,
 }
 
 impl<Bus, I2CError> CS43L22<Bus>
@@ -57,25 +97,21 @@ where
     Bus: i2c::Write<u8, Error = I2CError>,
     Bus: i2c::Read<u8, Error = I2CError>,
 {
-    pub fn new(
-        bus: Bus,
-        address: u8,
-        output_device: OutputDevice,
-        volume: u8,
-    ) -> Result<Self, I2CError> {
+    pub fn new(bus: Bus, address: u8, config: Config) -> Result<Self, I2CError> {
         // let mut counter = 0;
 
         let mut cs43l22 = Self {
             address,
             bus,
             stopped: true,
+            config,
         };
 
         // Keep codec powered OFF
         cs43l22.write_register(REG_POWER_CTL1, 0x01)?;
 
         // Save output device for mut ON/OFF procedure
-        cs43l22.write_register(REG_POWER_CTL2, output_device.value())?;
+        cs43l22.write_register(REG_POWER_CTL2, cs43l22.config.output_device.value())?;
 
         // clock config auto detect
         cs43l22.write_register(REG_CLOCKING_CTL, 0x81)?;
@@ -84,10 +120,10 @@ where
         cs43l22.write_register(REG_INTERFACE_CTL1, 0x04)?;
 
         // set master volume
-        cs43l22.set_volume(volume)?;
+        cs43l22.set_volume(cs43l22.config.volume)?;
 
         // if speaker is enabled, set mono mode and volume attenuation level
-        if output_device != OutputDevice::Headphone {
+        if cs43l22.config.output_device != OutputDevice::Headphone {
             // set speaker mono mode
             cs43l22.write_register(REG_PLAYBACK_CTL2, 0x06)?;
 
@@ -163,7 +199,7 @@ where
         // Kill time?
         for _ in 0..0xff {}
 
-        // self.write_register(REG_POWER_CTL2, OutputDev)?;
+        self.write_register(REG_POWER_CTL2, self.config.output_device.value())?;
 
         /* Exit the Power save mode */
         self.write_register(REG_POWER_CTL1, 0x9E)?;
@@ -193,6 +229,8 @@ where
             "volume must be between 0 and 100"
         );
 
+        self.config.volume = volume;
+
         // scale volume range from 0..=100 to 0..=255
         let volume = ((volume as usize) * 255 / 100) as u8;
 
@@ -215,7 +253,7 @@ where
         } else {
             self.write_register(REG_HEADPHONE_A_VOL, 0x00)?;
             self.write_register(REG_HEADPHONE_B_VOL, 0x00)?;
-            // self.write_register(REG_POWER_CTL2, OutputDev)?;
+            self.write_register(REG_POWER_CTL2, self.config.output_device.value())?;
         }
 
         Ok(())
@@ -227,8 +265,7 @@ where
         self.bus.write(self.address, &bytes)?;
 
         // Check that the value was written to the register
-        // TODO: add a flag if this should verify
-        if self.read_register(register)? != data {
+        if self.config.verify_write && self.read_register(register)? != data {
             panic!("error writing register({:#04x}): {:#04x}", register, data);
         }
 
