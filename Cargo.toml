@@ -2,6 +2,8 @@
 name = "cs43l22"
 version = "0.1.0"
 authors = ["Ian Mobley <ianmobley@gmail.com>"]
+description = "A rust device driver for the Cirrus Logic 43L22 stereo DAC"
+repository = "https://github.com/iMobs/cs43l22"
 license = "MIT"
 keywords = ["cs43l22", "audio", "codec"]
 categories = ["embedded", "no-std", "embedded-hal"]
