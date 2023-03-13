@@ -63,6 +63,7 @@ fn main() -> ! {
     let pins = (gpiob.pb6, gpiob.pb9);
     let i2c = dp.I2C1.i2c(pins, 100.kHz(), &clocks);
     let mut codec = CS43L22::new(i2c, 0x4A, Config::new().volume(100).verify_write(true)).unwrap();
+    defmt::println!("{}", codec);
 
     codec.play().unwrap();
 
@@ -95,13 +96,16 @@ fn main() -> ! {
         .cycle()
         .take(SAMPLE_RATE as usize);
 
-    loop {
+    // Play 1 second of the first tone and 1 second of the second tone 5 times (10 seconds)
+    for _ in 0..5 {
         for sample in sine_375_1sec.clone() {
             block!(i2s_transfer.write(sample)).ok();
         }
 
         i2s_transfer.write_iter(sine_750_1sec.clone());
     }
+
+    exit()
 }
 
 // same panicking *behavior* as `panic-probe` but doesn't print a panic message

@@ -84,20 +84,32 @@ impl Default for Config {
 }
 
 #[derive(Debug)]
-// #[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub struct CS43L22<Bus> {
+pub struct CS43L22<I2C> {
     address: u8,
-    bus: Bus,
+    bus: I2C,
     stopped: bool,
     config: Config,
 }
 
-impl<Bus, I2CError> CS43L22<Bus>
+#[derive(Debug)]
+pub enum Error<I2CError> {
+    I2C(I2CError),
+}
+
+pub type Result<T, I2CError> = core::result::Result<T, Error<I2CError>>;
+
+impl<I2CError> From<I2CError> for Error<I2CError> {
+    fn from(value: I2CError) -> Self {
+        Self::I2C(value)
+    }
+}
+
+impl<I2C, I2CError> CS43L22<I2C>
 where
-    Bus: i2c::Write<u8, Error = I2CError>,
-    Bus: i2c::WriteRead<u8, Error = I2CError>,
+    I2C: i2c::Write<u8, Error = I2CError>,
+    I2C: i2c::WriteRead<u8, Error = I2CError>,
 {
-    pub fn new(bus: Bus, address: u8, config: Config) -> Result<Self, I2CError> {
+    pub fn new(bus: I2C, address: u8, config: Config) -> Result<Self, I2CError> {
         let mut cs43l22 = Self {
             address,
             bus,
@@ -152,7 +164,7 @@ where
         Ok(cs43l22)
     }
 
-    pub fn release(self) -> Bus {
+    pub fn release(self) -> I2C {
         let Self { bus, .. } = self;
         bus
     }
@@ -275,6 +287,18 @@ where
         let mut bytes = [0];
         self.bus.write_read(self.address, &[register], &mut bytes)?;
         Ok(bytes[0])
+    }
+}
+
+#[cfg(feature = "defmt")]
+impl<I2C> defmt::Format for CS43L22<I2C> {
+    fn format(&self, fmt: defmt::Formatter) {
+        defmt::write!(fmt, "CS43L22 {{ ");
+        defmt::write!(fmt, "address: {}, ", self.address);
+        defmt::write!(fmt, "stopped: {}, ", self.stopped);
+        defmt::write!(fmt, "bus: I2C, ");
+        defmt::write!(fmt, "config: {} ", self.config);
+        defmt::write!(fmt, "}}");
     }
 }
 
