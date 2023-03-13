@@ -21,7 +21,11 @@ cortex-m-rt = "0.7"
 defmt = "0.3"
 defmt-rtt = "0.4"
 panic-probe = { version = "0.3", features = ["print-defmt"] }
-stm32f4xx-hal = { version = "0.15", features = ["stm32f407", "defmt"] }
+stm32f4xx-hal = { version = "0.15", features = ["stm32f407", "defmt", "i2s"] }
 
 [features]
 defmt = ["dep:defmt"]
+
+[[example]]
+name = "simple"
+required-features = ["defmt"]
