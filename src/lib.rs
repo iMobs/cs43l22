@@ -84,7 +84,7 @@ impl Default for Config {
 }
 
 #[derive(Debug)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+// #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct CS43L22<Bus> {
     address: u8,
     bus: Bus,
@@ -98,8 +98,6 @@ where
     Bus: i2c::WriteRead<u8, Error = I2CError>,
 {
     pub fn new(bus: Bus, address: u8, config: Config) -> Result<Self, I2CError> {
-        // let mut counter = 0;
-
         let mut cs43l22 = Self {
             address,
             bus,
@@ -110,7 +108,7 @@ where
         // Keep codec powered OFF
         cs43l22.write_register(REG_POWER_CTL1, 0x01)?;
 
-        // Save output device for mut ON/OFF procedure
+        // Save output device for mute ON/OFF procedure
         cs43l22.write_register(REG_POWER_CTL2, cs43l22.config.output_device.value())?;
 
         // clock config auto detect

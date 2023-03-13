@@ -49,35 +49,32 @@ fn main() -> ! {
         .cfgr
         .use_hse(8.MHz())
         .sysclk(96.MHz())
-        .i2s_clk(61440.kHz())
+        .i2s_clk(61_440.kHz())
         .freeze();
     let gpioa = dp.GPIOA.split();
     let gpiob = dp.GPIOB.split();
     let gpioc = dp.GPIOC.split();
+    let gpiod = dp.GPIOD.split();
 
-    let i2s = i2s::I2s::new(
-        dp.SPI3,
-        (
-            gpioa.pa15.into_alternate(),
-            gpioc.pc10.into_alternate(),
-            gpioc.pc7.into_alternate(),
-            gpioc.pc12.into_alternate(),
-        ),
-        &clocks,
-    );
+    let mut audio_reset = gpiod.pd4.into_push_pull_output();
+
+    audio_reset.set_high();
+
+    let pins = (gpiob.pb6, gpiob.pb9);
+    let i2c = dp.I2C1.i2c(pins, 100.kHz(), &clocks);
+    let mut codec = CS43L22::new(i2c, 0x4A, Config::new().volume(100).verify_write(true)).unwrap();
+
+    codec.play().unwrap();
+
+    let pins = (gpioa.pa4, gpioc.pc10, gpioc.pc7, gpioc.pc12);
+    let i2s = i2s::I2s::new(dp.SPI3, pins, &clocks);
     let i2s_config = I2sTransferConfig::new_master()
         .transmit()
         .standard(Philips)
         .data_format(Data32Channel32)
         .request_frequency(SAMPLE_RATE);
     let mut i2s_transfer = I2sTransfer::new(i2s, i2s_config);
-
-    let pins = (gpiob.pb6, gpiob.pb9);
-    let i2c = dp.I2C1.i2c(pins, 25.kHz(), &clocks);
-    let mut cs43l22 = CS43L22::new(i2c, 0x94, Config::new()).unwrap();
-    defmt::println!("{}", cs43l22);
-
-    cs43l22.play().unwrap();
+    defmt::println!("real sample rate: {}", i2s_transfer.sample_rate());
 
     let sine_375_1sec = SINE_375
         .iter()
