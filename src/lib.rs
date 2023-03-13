@@ -95,7 +95,7 @@ pub struct CS43L22<Bus> {
 impl<Bus, I2CError> CS43L22<Bus>
 where
     Bus: i2c::Write<u8, Error = I2CError>,
-    Bus: i2c::Read<u8, Error = I2CError>,
+    Bus: i2c::WriteRead<u8, Error = I2CError>,
 {
     pub fn new(bus: Bus, address: u8, config: Config) -> Result<Self, I2CError> {
         // let mut counter = 0;
@@ -260,9 +260,8 @@ where
     }
 
     fn write_register(&mut self, register: u8, data: u8) -> Result<(), I2CError> {
-        let bytes = [register, data];
-
-        self.bus.write(self.address, &bytes)?;
+        // Write MAP(register) byte and data
+        self.bus.write(self.address, &[register, data])?;
 
         // Check that the value was written to the register
         if self.config.verify_write && self.read_register(register)? != data {
@@ -273,9 +272,10 @@ where
     }
 
     fn read_register(&mut self, register: u8) -> Result<u8, I2CError> {
-        let mut bytes = [register, 0];
-        self.bus.read(self.address, &mut bytes)?;
-        Ok(bytes[1])
+        // Write MAP byte and then read data
+        let mut bytes = [0];
+        self.bus.write_read(self.address, &[register], &mut bytes)?;
+        Ok(bytes[0])
     }
 }
 
